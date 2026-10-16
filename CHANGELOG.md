@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-16
+
 ### Added
 
 - Somfy Protexial, Protexiom (incl. 5000 and 600) and Protexial IO alarm
@@ -41,4 +43,5 @@ the notes of the version's GitHub Release.
   button is clicked.
 - Device, feature and mode names in French or English.
 
-[Unreleased]: https://github.com/LM1LC3N7/gladys-somfy-protexial/commits/main
+[Unreleased]: https://github.com/LM1LC3N7/gladys-somfy-protexial/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/LM1LC3N7/gladys-somfy-protexial/releases/tag/v0.1.1
