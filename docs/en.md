@@ -1,61 +1,234 @@
-# Demo Devices Template
+# Somfy Protexial / Protexiom
 
-This is the user documentation of the integration. Gladys re-hosts this file
-and shows a permanent **Documentation** link to it in the Configuration screen
-(in the user's language, with English as the fallback) — it is when
-configuring that the user needs it most. Keep the short onboarding hints in
-the `section` blocks of the manifest `config_schema`; put the long
-step-by-step (screenshots, troubleshooting…) here.
+This integration brings the older **Somfy Protexial**, **Protexiom**
+(including Protexiom 5000 and 600) and **Protexial IO** alarm panels, sold in
+France until about 2016, into Gladys through **the panel's web page** on your
+local network: no Somfy cloud, no account. It reads the state of zones A, B
+and C and the faults of the panel, arms (and, if you allow it, disarms) the
+alarm, drives the shutters and lights controlled by the panel, and fires
+scenes. Unofficial, not affiliated with Somfy.
+
+> **Development version (0.1).** Built after the Home Assistant integration
+> [AuroreVgn/somfy-protexial](https://github.com/AuroreVgn/somfy-protexial)
+> (used on real panels from 2008 to 2013) and tested against a simulated panel
+> of each model, not yet with a real panel. Feedback is welcome on the GitHub
+> repository.
+
+## Which integration for which alarm?
+
+| Your alarm                                                             | Gladys integration                                                                                                                                                         |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Protexial, Protexiom, Protexial IO (a panel with a local web page)     | **this one**                                                                                                                                                               |
+| Somfy Protect: Home Alarm, Home Alarm Advanced, Somfy One / One+, Link | [Somfy Protect](https://github.com/prohand/gladys-somfyprotect) (cloud, the Somfy Protect app)                                                                             |
+| A Protexial IO paired with a TaHoma box                                | this one for the alarm; the [Overkiz](https://github.com/cicoub13/gladys-overkiz) integration for the shutters and devices of the TaHoma (it does not map the alarm today) |
+
+The Gladys core has no Somfy Protexial / Protexiom integration.
+
+## Supported models
+
+The integration recognizes the four known web interfaces by itself (page
+paths, login form, encoding):
+
+| Interface           | Panels                                                           | Pages                        |
+| ------------------- | ---------------------------------------------------------------- | ---------------------------- |
+| Protexial           | Protexial 2008, 2010 (v7_9, v8_1), 2013 (v10_13, v10_14, v10_15) | `/fr/…` (or `/de/`, `/gb/`…) |
+| Protexial IO        | Protexial IO 2013 (v10_13, v10_14)                               | `/fr/…`                      |
+| Protexiom           | Protexiom 2008-2013, Protexiom 5000 (v10_3), Protexiom 600       | at the root                  |
+| Protexiom (variant) | Protexiom whose card is shown to the administrator only          | at the root                  |
+
+The versions listed are the ones working with the reference integration. The
+year of your interface is written at the bottom of its pages; the software
+version is often at `http://ADDRESS/cfg/vers`. When the automatic detection
+fails, choose the model in the configuration. A panel whose interface is in
+German, English, Italian, Spanish or Dutch is read too: the page names are
+detected (only the "GSM connected" text is recognized in French only).
 
 ## What you get
 
-Six demo devices show up after installation: a weather station (real data
-from Open-Meteo), a switch, a dimmable light, a smart plug with power
-metering, a motion sensor and a camera.
+Three devices, in the **Discovery** tab:
 
-## Configuration
+| Device         | Features                                                                                                                                                                                                                                                                                                        |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Somfy alarm    | alarm mode (disarmed, zone A, B, C, A + B, A + C, B + C, total), one switch per zone (A, B, C), alarm triggered, intrusion detected, doors and windows closed, box tamper, low battery (an element), radio link; and depending on the panel: GSM connected, GSM signal (0 to 5), GSM operator, camera connected |
+| Somfy shutters | open, close, stop (no position: the panel has none)                                                                                                                                                                                                                                                             |
+| Somfy lights   | on, off (the panel does not report them: Gladys shows the last command, as the reference integration does)                                                                                                                                                                                                      |
 
-1. Open the **Configuration** tab of the integration.
-2. Set the **latitude** and **longitude** the demo weather station should
-   observe (they default to Paris), and pick your temperature unit.
-   The **refresh interval** sets how often the weather station and the
-   plug's power are read: every 5 minutes by default, every minute at most.
-3. Save: the devices appear in the **Discovery** tab, ready to be added.
+- The **faults** (intrusion, batteries, radio link) are **latched by the
+  panel** until cleared: a detected motion stays shown until the memory is
+  cleared. The **Clear the fault memory** button (configuration) and the scene
+  action of the same name do it.
+- **Alarm triggered** is 1 when an intrusion appears while a zone is armed. An
+  intrusion latched _before_ arming (never cleared) does not count as a
+  trigger.
+- **Doors and windows closed** follows the Gladys convention of opening
+  sensors: 1 = all closed, 0 = an opening is reported.
 
-The **Prefer the local connection** toggle drives the demo plug: it reports
-the channel it actually uses as a badge (local or cloud), with an orange dot
-when it runs degraded (local refused, cloud fallback).
+## Installation
 
-## Actions
+1. Find the address of the panel: the one you open in a browser for its web
+   page (for example `http://192.168.1.30`, with the port if there is one).
+   Better give it a fixed address in your router.
+2. In Gladys, **Integrations** → **Somfy Protexial / Protexiom** →
+   **Configuration**: enter the **address of the panel** and the **user access
+   code** (the one of the "Utilisateur1" account of the web page), then save.
+3. Import the **authentication card** (next section).
+4. Click **Test the connection**: the model found and the state of the zones
+   show up.
+5. Add the devices from the **Discovery** tab.
 
-- **Test the weather provider** — performs a live request to Open-Meteo and
-  shows the current temperature and humidity under the button.
-- **Identify a device** — pick one of your devices in the list and it will
-  signal itself (the demo light "blinks" in the logs).
+## The authentication card
+
+At each login, the panel's page asks, besides the access code, for the code
+of **one cell** of the **authentication card**: "Code d'authentification B1".
+The card comes with the panel (a laminated or paper card, often kept with the
+manual or in the installer's file): a grid of **30 codes**, columns **A to
+F**, rows **1 to 5**. The panel asks for another cell at each login: the
+integration needs the whole card.
+
+**The simplest: import it from the panel** (as the reference integration
+does). The panel can show its card once logged in:
+
+1. In the configuration, click **Import the card** with the fields left
+   empty. The answer gives the cell asked, for example "The panel asks for
+   cell B1 (column B, row 1)".
+2. Read the code of that cell on your card, type it in **Code of the cell
+   asked** and click **Import the card** again within 5 minutes (the reads are
+   paused meanwhile, so that the panel keeps asking for the same cell).
+3. The integration logs in, reads the 30 codes on the card page, saves them in
+   the **Authentication card** field and resumes the reads.
+
+On some **Protexiom** panels, the card is shown to the **administrator**
+account only: the answer to the first click says so; then also type the
+**administrator access code**. It is only used for this import and not saved.
+
+**Or by hand**: type the 30 codes in **Authentication card**, row by row, left
+to right: A1 B1 C1 D1 E1 F1, then A2 … F2, down to F5, separated by spaces or
+new lines. The form `A1=1234 B1=5678 …` (in any order) works too: it is the one
+the import saves.
+
+The card is a secret: Gladys keeps it like a password and never sends it back
+to the browser. Do not publish it (screenshots, logs).
+
+## One session at a time
+
+The panel accepts **one session at a time**. To leave you room, the
+integration keeps no session open: at each read it logs in, reads the state,
+then logs out (a few seconds). If you open the panel's web page at the same
+moment, it may refuse you ("session already open"): try again a few seconds
+later.
+
+The other way round, when **you** are logged in on the web page (or the Somfy
+app), the integration sees it, does not insist and tries again at the next
+read (status "Another session is open"). After **5 reads in a row** refused
+for that reason, it acknowledges the panel's error message and takes the
+session over, as the reference integration does: remember to log out of the
+web page.
+
+## Arming and disarming from Gladys
+
+- **Alarm mode**: choose the combination of zones you want. The missing zones
+  are armed one by one (or the three at once for "total").
+- **Zone A, B, C**: turning one on arms the zone. Turning one off **disarms
+  the three**: the panel only has an "Arrêt A B C" (stop A B C) button.
+- **Arming** is allowed by default; you can forbid it in the configuration.
+- **Disarming is off by default** (like the door opening of the DoorBird or
+  UniFi Access integrations): anyone able to control the devices of Gladys
+  (dashboard, scenes, app, assistant) could otherwise switch the alarm off.
+  Enable **Allow disarming from Gladys** only if your Gladys is well protected
+  (accounts, remote access). Going from one combination to another that drops
+  a zone (for example from "total" to "zone A") disarms, then arms the zones
+  asked.
+- A command the configuration refuses sends nothing to the panel.
+- **Every arming and disarming is written in the integration logs**: the ones
+  Gladys asks for ("ARMING zone A from Gladys", "Disarm REFUSED") and the ones
+  seen on the panel ("zone A ARMED (keypad, remote or app)").
+- The command is checked in the same session: the state read right after is
+  published at once.
+
+## Shutters and lights
+
+The panel drives a group of shutters and a group of lights (radio receivers
+paired with the panel). **Somfy shutters** takes open, close and stop;
+**Somfy lights** on and off. The panel does not report their state: Gladys
+shows the last command sent.
 
 ## Scenes
 
-The integration adds its own cards to the scene editor (Gladys 5.1 or
-later), under the **Integrations** category:
+Triggers, in the **Integrations** category of the scene editor (Gladys 5.1 or
+later):
 
-- **Motion detected** (trigger) — starts the scene when a demo motion sensor
-  sees something move. Optionally pick the sensor and what moved (person,
-  animal); left empty, any detection matches. The following actions can
-  read what moved with `{{triggerEvent.data.target}}`.
-- **Identify a device** (action) — makes the chosen device signal itself.
-  It returns whether the device could signal itself, so the following
-  actions can depend on it.
+| Trigger                   | When                                                                 | Variables                                  |
+| ------------------------- | -------------------------------------------------------------------- | ------------------------------------------ |
+| Somfy alarm triggered     | an intrusion appears while a zone is armed                           | `zones` (zones armed, e.g. `A B`)          |
+| Somfy zone armed          | a zone was just armed (optional filter on the zone)                  | `zone`, `zones` (armed now), `by_gladys`   |
+| Somfy zone disarmed       | a zone was just disarmed (optional filter on the zone)               | `zone`, `zones` (still armed), `by_gladys` |
+| Somfy intrusion or tamper | a detector reports an intrusion (armed or not), or the box is opened | `kind` (`intrusion` or `tamper`), `armed`  |
+| Somfy low battery         | an element reports a low battery                                     | —                                          |
 
-## Dashboard
+- `by_gladys` is true when the change follows a Gladys command (less than 5
+  minutes before): handy not to be notified of your own arming.
+- The events come from the reads: they arrive with the delay of the next read.
+  Nothing fires at the first read after a start.
 
-Add the **Demo status** widget to a dashboard: it shows the live
-temperature of the weather station and the power of the office plug, the
-connection the plug currently uses (orange when degraded) and the observed
-location. Its **Identify the light** button makes the demo light signal
-itself.
+Scene action: **Clear the Somfy fault memory** (alarms, batteries, radio
+links, or all).
+
+## Refresh interval and batteries
+
+The panel runs **on batteries** (the mains only powers its Ethernet module)
+and every read wakes it. Two intervals:
+
+- **while a zone is armed**: 60 s by default (30 s to 1 h);
+- **while nothing is armed**: 5 minutes by default (30 s to 24 h). Arming with
+  a remote or the keypad shows in Gladys at the next read.
+
+The **Read the panel now** button forces a read. After a command sent by
+Gladys, the state is read again at once. After errors, the tries space out
+(1, 2, 5, 10 then 15 minutes).
+
+## Protection against locking the panel
+
+Too many wrong codes lock the logins of the panel ("Nombre d'essais maximum
+atteint"). The integration does not take that risk:
+
+- a refused **access code** stops the logins at once;
+- a refused **card code** is reported with its cell ("the panel refused the
+  card code of cell C3"); two refusals in a row stop the logins;
+- a cell missing from the card is reported without trying to log in;
+- when the panel says it blocks logins, everything stops.
+
+Once stopped, the integration waits for a change of the configuration or a
+click on **Test the connection**; the connection status says why.
+
+## Options
+
+- **Panel model**: automatic by default.
+- **Allow arming / disarming from Gladys**: see above.
+- **Refresh intervals**: see above.
+- **Language of the device names**: French or English, for the devices added
+  afterwards.
 
 ## Troubleshooting
 
-The integration logs everything it does: check the integration logs from the
-Gladys UI (or `docker logs` on the host) with `LOG_LEVEL=debug` for the full
-detail.
+- **"No Somfy … login page at this address"**: check the address (open it in
+  a browser), the port, and that the panel is powered. Otherwise choose the
+  model in the configuration.
+- **"Panel unreachable"**: the panel does not answer (network, Ethernet module,
+  address changed).
+- **"Another session is open"**: log out of the panel's web page or of the
+  Somfy app.
+- **"The panel refused the card code of cell …"**: fix that code of the card
+  (or import it again).
+- **The intrusion or battery states stay at 1**: the panel latches them; clear
+  the fault memory.
+- The integration logs (**Logs** tab, or `docker logs`) detail every read; the
+  codes are never in them.
+
+## Privacy
+
+The address, the access code and the card stay in Gladys (the code and the
+card as secrets, never sent back to the browser). The integration only talks
+to the panel, on your local network, like your browser: the web page of these
+panels is plain, unencrypted HTTP, so the codes travel in clear on the local
+network, exactly as when you log in yourself. Somfy, Protexial and Protexiom
+are trademarks of Somfy; this integration is not affiliated with Somfy.

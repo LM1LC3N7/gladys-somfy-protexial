@@ -1,177 +1,630 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "Somfy Protexial / Protexiom",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "Somfy Protexial, Protexiom and Protexial IO alarms, locally: zones, shutters, lights.",
+    "fr": "Alarmes Somfy Protexial, Protexiom et Protexial IO en local : zones, volets, lumières."
   },
-  "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
+  "version": "0.1.0",
+  "docker_image": "ghcr.io/lm1lc3n7/gladys-somfy-protexial:0.1.0",
   "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "cover_image": "https://raw.githubusercontent.com/LM1LC3N7/gladys-somfy-protexial/main/cover.png",
+  "categories": ["security"],
+  "transports": ["local"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": {
+        "en": "Your Somfy alarm panel",
+        "fr": "Votre centrale d'alarme Somfy"
+      },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "For the Somfy Protexial, Protexiom (including 5000 and 600) and Protexial IO alarm panels sold until about 2016, through the web page of the panel on your network, without the Somfy cloud: the zones A, B and C (state, arming, disarming if you allow it), the shutters and lights driven by the panel, the faults (batteries, tamper, radio, GSM, doors and windows, intrusion) and scene triggers. The panel accepts one session at a time: each read logs in, reads and logs out, so the Somfy web page may refuse you during a read. For the newer Somfy Protect range, use the Somfy Protect integration instead. Unofficial, not affiliated with Somfy.",
+        "fr": "Pour les centrales d'alarme Somfy Protexial, Protexiom (dont 5000 et 600) et Protexial IO vendues jusque vers 2016, par la page web de la centrale sur votre réseau, sans le cloud Somfy : les zones A, B et C (état, armement, désarmement si vous l'autorisez), les volets et lumières pilotés par la centrale, les défauts (piles, autoprotection, radio, GSM, portes et fenêtres, intrusion) et des déclencheurs de scène. La centrale n'accepte qu'une session à la fois : chaque lecture se connecte, lit et se déconnecte, la page web Somfy peut donc vous refuser pendant une lecture. Pour la gamme récente Somfy Protect, utilisez plutôt l'intégration Somfy Protect. Non officiel, sans lien avec Somfy."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://github.com/LM1LC3N7/gladys-somfy-protexial/blob/main/docs/fr.md",
+          "label": {
+            "en": "Guide (French)",
+            "fr": "Guide (français)"
+          }
+        },
+        {
+          "url": "https://github.com/LM1LC3N7/gladys-somfy-protexial/blob/main/docs/en.md",
+          "label": {
+            "en": "Guide (English)",
+            "fr": "Guide (anglais)"
+          }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
+      "key": "url",
+      "type": "string",
+      "label": {
+        "en": "Address of the panel",
+        "fr": "Adresse de la centrale"
       },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
-      "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
+      "description": {
+        "en": "The address you open in a browser to reach the panel's web page, with its port if it has one.",
+        "fr": "L'adresse que vous ouvrez dans un navigateur pour la page web de la centrale, avec son port s'il y en a un."
+      },
+      "placeholder": {
+        "en": "http://192.168.1.30",
+        "fr": "http://192.168.1.30"
+      },
+      "required": true
     },
     {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
+      "key": "user_code",
+      "type": "secret",
+      "label": {
+        "en": "User access code",
+        "fr": "Code d'accès utilisateur"
       },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
+      "description": {
+        "en": "The access code of the \"Utilisateur1\" account of the web page (the code you type with your card code).",
+        "fr": "Le code d'accès du compte « Utilisateur1 » de la page web (celui que vous tapez avec le code de la carte)."
+      },
+      "required": true
     },
     {
-      "key": "unit",
+      "key": "card_section",
+      "type": "section",
+      "label": {
+        "en": "Authentication card",
+        "fr": "Carte d'authentification"
+      },
+      "description": {
+        "en": "At each login the panel asks for the code of one cell of the authentication card delivered with it: a grid of 30 codes, columns A to F, rows 1 to 5. The simplest is the \"Import the card\" button below: it asks the panel which cell it wants, you type that one code, and it reads the whole card from the panel. Or type the 30 codes here, row by row (A1 B1 … F1, then A2 … F5), or as A1=1234 B1=5678 …",
+        "fr": "À chaque connexion, la centrale demande le code d'une case de la carte d'authentification livrée avec elle : une grille de 30 codes, colonnes A à F, lignes 1 à 5. Le plus simple est le bouton « Importer la carte » plus bas : il demande à la centrale quelle case elle veut, vous tapez ce seul code, et il lit toute la carte dans la centrale. Ou saisissez ici les 30 codes, ligne par ligne (A1 B1 … F1, puis A2 … F5), ou sous la forme A1=1234 B1=5678 …"
+      }
+    },
+    {
+      "key": "auth_card",
+      "type": "secret",
+      "label": {
+        "en": "Authentication card (30 codes)",
+        "fr": "Carte d'authentification (30 codes)"
+      },
+      "placeholder": {
+        "en": "A1=1234 B1=5678 … F5=9012",
+        "fr": "A1=1234 B1=5678 … F5=9012"
+      },
+      "required": false
+    },
+    {
+      "key": "model",
       "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
+      "label": {
+        "en": "Panel model",
+        "fr": "Modèle de centrale"
+      },
+      "description": {
+        "en": "Found by itself from the login page. Choose it only when the detection fails.",
+        "fr": "Trouvé tout seul d'après la page de connexion. À choisir seulement si la détection échoue."
+      },
       "required": false,
-      "default": "celsius",
+      "default": "auto",
       "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
+        {
+          "value": "auto",
+          "label": {
+            "en": "Automatic",
+            "fr": "Automatique"
+          }
+        },
+        {
+          "value": "protexial",
+          "label": {
+            "en": "Protexial (2008-2013)",
+            "fr": "Protexial (2008-2013)"
+          }
+        },
+        {
+          "value": "protexial_io",
+          "label": {
+            "en": "Protexial IO",
+            "fr": "Protexial IO"
+          }
+        },
+        {
+          "value": "protexiom",
+          "label": {
+            "en": "Protexiom (incl. 5000, 600)",
+            "fr": "Protexiom (dont 5000, 600)"
+          }
+        },
+        {
+          "value": "protexiom_alt",
+          "label": {
+            "en": "Protexiom, card shown to the administrator only",
+            "fr": "Protexiom, carte visible par l'administrateur seulement"
+          }
+        }
       ]
     },
     {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "key": "safety",
+      "type": "section",
+      "label": {
+        "en": "Safety",
+        "fr": "Sécurité"
+      },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "Anyone who can control the devices in Gladys (dashboard, scenes, the Gladys app) can use the alarm through this integration. Arming is allowed by default. Disarming is off by default: allow it only if your Gladys is well protected. Every arming and disarming is written in the integration logs.",
+        "fr": "Toute personne pouvant piloter les appareils dans Gladys (tableau de bord, scènes, application Gladys) peut agir sur l'alarme par cette intégration. L'armement est permis par défaut. Le désarmement est désactivé par défaut : ne l'autorisez que si votre Gladys est bien protégé. Chaque armement et désarmement est écrit dans les journaux de l'intégration."
+      }
+    },
+    {
+      "key": "allow_arm",
+      "type": "boolean",
+      "label": {
+        "en": "Allow arming from Gladys",
+        "fr": "Autoriser l'armement depuis Gladys"
+      },
+      "required": false,
+      "default": true
+    },
+    {
+      "key": "allow_disarm",
+      "type": "boolean",
+      "label": {
+        "en": "Allow disarming from Gladys",
+        "fr": "Autoriser le désarmement depuis Gladys"
+      },
+      "description": {
+        "en": "The panel disarms the three zones together: turning one zone off disarms A, B and C.",
+        "fr": "La centrale désarme les trois zones ensemble : éteindre une zone désarme A, B et C."
+      },
+      "required": false,
+      "default": false
+    },
+    {
+      "key": "poll_interval",
+      "type": "number",
+      "label": {
+        "en": "Refresh interval while armed (s)",
+        "fr": "Intervalle de lecture quand armée (s)"
+      },
+      "description": {
+        "en": "How often the panel is read while a zone is armed, in seconds (30 to 3600). The panel runs on batteries: every read uses a little of them.",
+        "fr": "Fréquence de lecture de la centrale quand une zone est armée, en secondes (30 à 3600). La centrale fonctionne sur piles : chaque lecture en consomme un peu."
+      },
+      "required": false,
+      "default": 60,
+      "min": 30,
+      "max": 3600
+    },
+    {
+      "key": "poll_interval_disarmed",
+      "type": "number",
+      "label": {
+        "en": "Refresh interval while disarmed (s)",
+        "fr": "Intervalle de lecture quand désarmée (s)"
+      },
+      "description": {
+        "en": "How often the panel is read while no zone is armed, in seconds (30 to 86400). Arming with a remote or the keypad shows in Gladys at the next read.",
+        "fr": "Fréquence de lecture quand aucune zone n'est armée, en secondes (30 à 86400). Un armement par télécommande ou clavier apparaît dans Gladys à la lecture suivante."
       },
       "required": false,
       "default": 300,
-      "min": 60,
-      "max": 3600
+      "min": 30,
+      "max": 86400
+    },
+    {
+      "key": "language",
+      "type": "select",
+      "label": {
+        "en": "Language of the device names",
+        "fr": "Langue des noms des appareils"
+      },
+      "description": {
+        "en": "Used for the names of the devices, features and alarm modes added from now on.",
+        "fr": "Sert aux noms des appareils, fonctionnalités et modes d'alarme ajoutés désormais."
+      },
+      "required": false,
+      "default": "fr",
+      "options": [
+        {
+          "value": "fr",
+          "label": {
+            "en": "French",
+            "fr": "Français"
+          }
+        },
+        {
+          "value": "en",
+          "label": {
+            "en": "English",
+            "fr": "Anglais"
+          }
+        }
+      ]
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
-      "timeout_seconds": 30
+      "key": "test_connection",
+      "label": {
+        "en": "Test the connection",
+        "fr": "Tester la connexion"
+      },
+      "timeout_seconds": 90
     },
     {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
+      "key": "import_card",
+      "label": {
+        "en": "Import the card",
+        "fr": "Importer la carte"
+      },
+      "timeout_seconds": 90,
       "fields": [
         {
-          "key": "device",
+          "key": "cell_code",
+          "type": "secret",
+          "label": {
+            "en": "Code of the cell asked (second click)",
+            "fr": "Code de la case demandée (second clic)"
+          },
+          "placeholder": {
+            "en": "Leave empty on the first click",
+            "fr": "Laissez vide au premier clic"
+          },
+          "required": false
+        },
+        {
+          "key": "admin_code",
+          "type": "secret",
+          "label": {
+            "en": "Administrator access code (some Protexiom only)",
+            "fr": "Code d'accès administrateur (certaines Protexiom seulement)"
+          },
+          "required": false
+        }
+      ]
+    },
+    {
+      "key": "refresh",
+      "label": {
+        "en": "Read the panel now",
+        "fr": "Lire la centrale maintenant"
+      },
+      "timeout_seconds": 60
+    },
+    {
+      "key": "reset_faults",
+      "label": {
+        "en": "Clear the fault memory",
+        "fr": "Effacer la mémoire des défauts"
+      },
+      "timeout_seconds": 60,
+      "fields": [
+        {
+          "key": "fault",
           "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
+          "label": {
+            "en": "Faults",
+            "fr": "Défauts"
+          },
+          "required": false,
+          "default": "all",
+          "options": [
+            {
+              "value": "all",
+              "label": {
+                "en": "All",
+                "fr": "Tous"
+              }
+            },
+            {
+              "value": "alarm",
+              "label": {
+                "en": "Alarms (intrusion, tamper)",
+                "fr": "Alarmes (intrusion, autoprotection)"
+              }
+            },
+            {
+              "value": "battery",
+              "label": {
+                "en": "Batteries",
+                "fr": "Piles"
+              }
+            },
+            {
+              "value": "link",
+              "label": {
+                "en": "Radio links",
+                "fr": "Liaisons radio"
+              }
+            }
+          ]
         }
       ]
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "alarm_triggered",
+      "label": {
+        "en": "Somfy alarm triggered",
+        "fr": "Alarme Somfy déclenchée"
+      },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "The panel reports an intrusion while a zone is armed.",
+        "fr": "La centrale signale une intrusion alors qu'une zone est armée."
+      },
+      "variables": [
+        {
+          "key": "zones",
+          "type": "string",
+          "label": {
+            "en": "Zones armed",
+            "fr": "Zones armées"
+          }
+        }
+      ]
+    },
+    {
+      "key": "alarm_armed",
+      "label": {
+        "en": "Somfy zone armed",
+        "fr": "Zone Somfy armée"
+      },
+      "description": {
+        "en": "A zone of the panel was armed (from Gladys, a remote, the keypad or the app).",
+        "fr": "Une zone de la centrale a été armée (depuis Gladys, une télécommande, le clavier ou l'application)."
       },
       "fields": [
         {
-          "key": "device",
+          "key": "zone",
           "type": "select",
-          "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
-        },
-        {
-          "key": "target",
-          "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
+          "label": {
+            "en": "Zone",
+            "fr": "Zone"
+          },
           "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
+            {
+              "value": "A",
+              "label": {
+                "en": "A",
+                "fr": "A"
+              }
+            },
+            {
+              "value": "B",
+              "label": {
+                "en": "B",
+                "fr": "B"
+              }
+            },
+            {
+              "value": "C",
+              "label": {
+                "en": "C",
+                "fr": "C"
+              }
+            }
           ]
         }
       ],
       "variables": [
         {
-          "key": "target",
+          "key": "zone",
           "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "label": {
+            "en": "Zone",
+            "fr": "Zone"
+          }
+        },
+        {
+          "key": "zones",
+          "type": "string",
+          "label": {
+            "en": "Zones armed now",
+            "fr": "Zones armées maintenant"
+          }
+        },
+        {
+          "key": "by_gladys",
+          "type": "boolean",
+          "label": {
+            "en": "Asked by Gladys",
+            "fr": "Demandé par Gladys"
+          }
         }
       ]
+    },
+    {
+      "key": "alarm_disarmed",
+      "label": {
+        "en": "Somfy zone disarmed",
+        "fr": "Zone Somfy désarmée"
+      },
+      "description": {
+        "en": "A zone of the panel was disarmed (from Gladys, a remote, the keypad or the app).",
+        "fr": "Une zone de la centrale a été désarmée (depuis Gladys, une télécommande, le clavier ou l'application)."
+      },
+      "fields": [
+        {
+          "key": "zone",
+          "type": "select",
+          "label": {
+            "en": "Zone",
+            "fr": "Zone"
+          },
+          "options": [
+            {
+              "value": "A",
+              "label": {
+                "en": "A",
+                "fr": "A"
+              }
+            },
+            {
+              "value": "B",
+              "label": {
+                "en": "B",
+                "fr": "B"
+              }
+            },
+            {
+              "value": "C",
+              "label": {
+                "en": "C",
+                "fr": "C"
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "key": "zone",
+          "type": "string",
+          "label": {
+            "en": "Zone",
+            "fr": "Zone"
+          }
+        },
+        {
+          "key": "zones",
+          "type": "string",
+          "label": {
+            "en": "Zones still armed",
+            "fr": "Zones encore armées"
+          }
+        },
+        {
+          "key": "by_gladys",
+          "type": "boolean",
+          "label": {
+            "en": "Asked by Gladys",
+            "fr": "Demandé par Gladys"
+          }
+        }
+      ]
+    },
+    {
+      "key": "intrusion_or_tamper",
+      "label": {
+        "en": "Somfy intrusion or tamper",
+        "fr": "Intrusion ou autoprotection Somfy"
+      },
+      "description": {
+        "en": "The panel reports an intrusion (a detector, armed or not) or the tamper of its box.",
+        "fr": "La centrale signale une intrusion (un détecteur, armée ou non) ou l'autoprotection de son boîtier."
+      },
+      "fields": [
+        {
+          "key": "kind",
+          "type": "select",
+          "label": {
+            "en": "Kind",
+            "fr": "Type"
+          },
+          "options": [
+            {
+              "value": "intrusion",
+              "label": {
+                "en": "Intrusion",
+                "fr": "Intrusion"
+              }
+            },
+            {
+              "value": "tamper",
+              "label": {
+                "en": "Tamper",
+                "fr": "Autoprotection"
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "key": "kind",
+          "type": "string",
+          "label": {
+            "en": "Kind (intrusion or tamper)",
+            "fr": "Type (intrusion ou tamper)"
+          }
+        },
+        {
+          "key": "armed",
+          "type": "boolean",
+          "label": {
+            "en": "A zone was armed",
+            "fr": "Une zone était armée"
+          }
+        }
+      ]
+    },
+    {
+      "key": "battery_low",
+      "label": {
+        "en": "Somfy low battery",
+        "fr": "Piles faibles Somfy"
+      },
+      "description": {
+        "en": "The panel reports a low battery in one of its elements.",
+        "fr": "La centrale signale des piles faibles dans un de ses éléments."
+      }
     }
   ],
   "scene_actions": [
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+      "key": "reset_faults",
+      "label": {
+        "en": "Clear the Somfy fault memory",
+        "fr": "Effacer la mémoire des défauts Somfy"
       },
-      "timeout_seconds": 15,
+      "timeout_seconds": 60,
       "fields": [
         {
-          "key": "device",
+          "key": "fault",
           "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
-        }
-      ],
-      "outputs": [
-        {
-          "key": "signalled",
-          "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "label": {
+            "en": "Faults",
+            "fr": "Défauts"
+          },
+          "required": false,
+          "default": "all",
+          "options": [
+            {
+              "value": "all",
+              "label": {
+                "en": "All",
+                "fr": "Tous"
+              }
+            },
+            {
+              "value": "alarm",
+              "label": {
+                "en": "Alarms (intrusion, tamper)",
+                "fr": "Alarmes (intrusion, autoprotection)"
+              }
+            },
+            {
+              "value": "battery",
+              "label": {
+                "en": "Batteries",
+                "fr": "Piles"
+              }
+            },
+            {
+              "value": "link",
+              "label": {
+                "en": "Radio links",
+                "fr": "Liaisons radio"
+              }
+            }
+          ]
         }
       ]
-    }
-  ],
-  "widgets": [
-    {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
-      },
-      "icon": "activity",
-      "action_timeout_seconds": 15
     }
   ]
 }

@@ -1,45 +1,75 @@
 // -----------------------------------------------------------------------------
-// Integration configuration.
-//
-// The configuration is filled in by the user in Gladys, from the `config_schema`
-// declared in `gladys-assistant-integration.json`. The SDK fetches it for you
-// (`gladys.getConfig()`) and notifies you of every change through
-// `gladys.onConfigUpdated()`.
-//
-// This module only provides defaults and normalizes the received object, so the
-// rest of the code never has to deal with `undefined`.
+// The configuration of the manifest `config_schema`, normalized.
 // -----------------------------------------------------------------------------
 
-// Defaults: they MUST stay consistent with the `default` values declared in the
-// `config_schema` of the manifest.
-export const DEFAULT_CONFIG = {
-  latitude: 48.8566, // Paris
-  longitude: 2.3522,
-  unit: 'celsius', // 'celsius' | 'fahrenheit'
-  // Seconds between two reads of the polled sensors. Gladys polls at most once
-  // a minute: slower intervals are applied by skipping polls (see
-  // createPoller in src/devices/index.js).
-  poll_frequency: 300,
-  // Reserved key (NOT in config_schema): because the manifest declares both
-  // 'local' and 'cloud' in its `transports` field, Gladys shows a standard
-  // "Prefer the local connection" toggle and sends the user's choice here.
-  // Read-only for the integration; defaults to true.
-  GLADYS_PREFER_LOCAL: true,
+import { parseCard } from './card.js';
+import { POLL_ARMED, POLL_DISARMED } from './constants.js';
+import { MODEL_KEYS } from './models.js';
+
+/** Defaults, mirrored by the manifest (checked by test/manifest.test.js). */
+export const DEFAULTS = {
+  model: 'auto',
+  allow_arm: true,
+  allow_disarm: false,
+  poll_interval: POLL_ARMED.default,
+  poll_interval_disarmed: POLL_DISARMED.default,
+  language: 'fr',
 };
 
+export const LANGUAGES = ['fr', 'en'];
+
 /**
- * Merge the user config with the defaults.
- * @param {Record<string, unknown>} raw config returned by the SDK
+ * `http://192.168.1.30`, `192.168.1.30:8080/fr/login.htm`… -> `http://192.168.1.30[:8080]`.
+ * Only the scheme, host and port matter: every page path comes from the model.
  */
+export function normalizeUrl(raw) {
+  let text = String(raw ?? '').trim();
+  if (text === '') {
+    return '';
+  }
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(text)) {
+    text = `http://${text}`;
+  }
+  try {
+    const url = new URL(text);
+    if (!['http:', 'https:'].includes(url.protocol) || url.hostname === '') {
+      return '';
+    }
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    return '';
+  }
+}
+
+const bool = (value, fallback) => (typeof value === 'boolean' ? value : fallback);
+
+const seconds = (value, { default: fallback, min, max }) => {
+  const number = Number(value);
+  return value !== null && value !== '' && value !== undefined && Number.isFinite(number)
+    ? Math.round(Math.max(min, Math.min(max, number)))
+    : fallback;
+};
+
 export function normalizeConfig(raw = {}) {
+  const model = String(raw?.model ?? DEFAULTS.model)
+    .trim()
+    .toLowerCase();
+  const language = String(raw?.language ?? DEFAULTS.language)
+    .trim()
+    .toLowerCase();
   return {
-    ...DEFAULT_CONFIG,
-    ...raw,
-    // Force the types: config may arrive as strings from a form.
-    latitude: Number(raw.latitude ?? DEFAULT_CONFIG.latitude),
-    longitude: Number(raw.longitude ?? DEFAULT_CONFIG.longitude),
-    poll_frequency: Number(raw.poll_frequency ?? DEFAULT_CONFIG.poll_frequency),
-    // The preference is a boolean; anything but an explicit false means true.
-    GLADYS_PREFER_LOCAL: raw.GLADYS_PREFER_LOCAL !== false,
+    url: normalizeUrl(raw?.url),
+    userCode: String(raw?.user_code ?? '').trim(),
+    card: parseCard(raw?.auth_card),
+    model: model === 'auto' || MODEL_KEYS.includes(model) ? model : DEFAULTS.model,
+    allowArm: bool(raw?.allow_arm, DEFAULTS.allow_arm),
+    allowDisarm: bool(raw?.allow_disarm, DEFAULTS.allow_disarm),
+    pollArmed: seconds(raw?.poll_interval, POLL_ARMED),
+    pollDisarmed: seconds(raw?.poll_interval_disarmed, POLL_DISARMED),
+    language: LANGUAGES.includes(language) ? language : DEFAULTS.language,
   };
 }
+
+/** What a panel session depends on: a change forgets the detection and the refusals. */
+export const sessionKey = (config) =>
+  JSON.stringify([config.url, config.userCode, config.card.text, config.model]);

@@ -1,67 +1,245 @@
-# Template de démonstration
+# Somfy Protexial / Protexiom
 
-Ceci est la documentation utilisateur de l'intégration. Gladys ré-héberge ce
-fichier et affiche un lien **Documentation** permanent vers lui dans l'écran
-de configuration (dans la langue de l'utilisateur, avec l'anglais en repli) —
-c'est au moment de configurer que l'utilisateur en a le plus besoin. Gardez
-les courtes indications d'accueil dans les blocs `section` du `config_schema`
-du manifest ; mettez ici le pas-à-pas détaillé (captures d'écran, dépannage…).
+Cette intégration amène dans Gladys les anciennes centrales d'alarme
+**Somfy Protexial**, **Protexiom** (dont Protexiom 5000 et 600) et
+**Protexial IO**, vendues en France jusque vers 2016, par **la page web de la
+centrale** sur votre réseau local : pas de cloud Somfy, pas de compte. Elle lit
+l'état des zones A, B et C et les défauts de la centrale, arme (et, si vous
+l'autorisez, désarme) l'alarme, pilote les volets et lumières commandés par la
+centrale, et déclenche des scènes. Non officielle, sans lien avec Somfy.
+
+> **Version de développement (0.1).** Réalisée d'après l'intégration Home
+> Assistant [AuroreVgn/somfy-protexial](https://github.com/AuroreVgn/somfy-protexial)
+> (utilisée sur de vraies centrales de 2008 à 2013) et testée avec une
+> centrale simulée de chaque modèle, pas encore avec une vraie centrale. Vos
+> retours sont les bienvenus sur le dépôt GitHub.
+
+## Quelle intégration pour quelle alarme ?
+
+| Votre alarme                                                            | Intégration Gladys                                                                                                                                                                |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Protexial, Protexiom, Protexial IO (centrale avec une page web locale)  | **celle-ci**                                                                                                                                                                      |
+| Somfy Protect : Home Alarm, Home Alarm Advanced, Somfy One / One+, Link | [Somfy Protect](https://github.com/prohand/gladys-somfyprotect) (cloud, l'application Somfy Protect)                                                                              |
+| Une Protexial IO associée à une box TaHoma                              | celle-ci pour l'alarme ; l'intégration [Overkiz](https://github.com/cicoub13/gladys-overkiz) pour les volets et équipements de la TaHoma (elle ne reprend pas l'alarme à ce jour) |
+
+Gladys n'a pas d'intégration Somfy Protexial / Protexiom dans son cœur.
+
+## Modèles pris en charge
+
+L'intégration reconnaît seule les quatre interfaces web connues (chemins des
+pages, formulaire de connexion, encodage) :
+
+| Interface            | Centrales                                                        | Pages                        |
+| -------------------- | ---------------------------------------------------------------- | ---------------------------- |
+| Protexial            | Protexial 2008, 2010 (v7_9, v8_1), 2013 (v10_13, v10_14, v10_15) | `/fr/…` (ou `/de/`, `/gb/`…) |
+| Protexial IO         | Protexial IO 2013 (v10_13, v10_14)                               | `/fr/…`                      |
+| Protexiom            | Protexiom 2008-2013, Protexiom 5000 (v10_3), Protexiom 600       | à la racine                  |
+| Protexiom (variante) | Protexiom dont la carte n'est visible que par l'administrateur   | à la racine                  |
+
+Les versions listées sont celles qui fonctionnent avec l'intégration de
+référence. L'année de votre interface est écrite en bas de ses pages ; la
+version du logiciel est souvent à l'adresse `http://ADRESSE/cfg/vers`. Si la
+détection automatique échoue, choisissez le modèle dans la configuration. Une
+centrale dont l'interface est en allemand, anglais, italien, espagnol ou
+néerlandais est lue aussi : les noms des pages sont détectés (seul l'état
+« GSM connecté » n'est reconnu qu'en français).
 
 ## Ce que vous obtenez
 
-Six appareils de démonstration apparaissent après l'installation : une
-station météo (vraies données Open-Meteo), un interrupteur, une lampe
-variable, une prise connectée avec mesure de puissance, un détecteur de
-mouvement et une caméra.
+Trois appareils, dans l'onglet **Découverte** :
 
-## Configuration
+| Appareil       | Fonctionnalités                                                                                                                                                                                                                                                                                                                             |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Alarme Somfy   | mode de l'alarme (désarmée, zone A, B, C, A + B, A + C, B + C, totale), une commande par zone (A, B, C), alarme déclenchée, intrusion détectée, portes et fenêtres fermées, autoprotection du boîtier, piles faibles (un élément), liaison radio ; et selon la centrale : GSM connecté, signal GSM (0 à 5), opérateur GSM, caméra connectée |
+| Volets Somfy   | ouvrir, fermer, arrêter (sans position : la centrale n'en donne pas)                                                                                                                                                                                                                                                                        |
+| Lumières Somfy | allumer, éteindre (la centrale ne dit pas si elles sont allumées : Gladys affiche la dernière commande, comme l'intégration de référence)                                                                                                                                                                                                   |
 
-1. Ouvrez l'onglet **Configuration** de l'intégration.
-2. Renseignez la **latitude** et la **longitude** que la station météo de
-   démonstration doit observer (Paris par défaut), et choisissez votre unité
-   de température. L'**intervalle de rafraîchissement** règle la fréquence
-   de lecture de la station météo et de la puissance de la prise : toutes
-   les 5 minutes par défaut, toutes les minutes au plus.
-3. Enregistrez : les appareils apparaissent dans l'onglet **Découverte**,
-   prêts à être ajoutés.
+- Les **défauts** (intrusion, piles, liaison radio) sont **mémorisés par la
+  centrale** jusqu'à ce qu'on les efface : un mouvement détecté reste affiché
+  tant que la mémoire n'est pas effacée. Le bouton **Effacer la mémoire des
+  défauts** (configuration) et l'action de scène du même nom le font.
+- **Alarme déclenchée** vaut 1 quand une intrusion apparaît pendant qu'une zone
+  est armée. Une intrusion mémorisée _avant_ l'armement (jamais effacée) ne
+  compte pas comme un déclenchement.
+- **Portes et fenêtres fermées** suit la convention Gladys des détecteurs
+  d'ouverture : 1 = tout est fermé, 0 = une ouverture est signalée.
 
-Le réglage **Préférer la connexion locale** pilote la prise de
-démonstration : elle affiche en badge le canal réellement utilisé (local ou
-cloud), avec un point orange quand elle fonctionne en mode dégradé (local
-refusé, bascule cloud).
+## Installation
 
-## Actions
+1. Trouvez l'adresse de la centrale : celle que vous ouvrez dans un navigateur
+   pour sa page web (par exemple `http://192.168.1.30`, avec le port s'il y en
+   a un). Donnez-lui de préférence une adresse fixe dans votre box.
+2. Dans Gladys, **Intégrations** → **Somfy Protexial / Protexiom** →
+   **Configuration** : saisissez l'**adresse de la centrale** et le **code
+   d'accès utilisateur** (celui du compte « Utilisateur1 » de la page web),
+   puis enregistrez.
+3. Importez la **carte d'authentification** (section suivante).
+4. Cliquez sur **Tester la connexion** : le modèle trouvé et l'état des zones
+   s'affichent.
+5. Ajoutez les appareils depuis l'onglet **Découverte**.
 
-- **Tester le fournisseur météo** — effectue une requête en direct vers
-  Open-Meteo et affiche la température et l'humidité actuelles sous le
-  bouton.
-- **Identifier un appareil** — choisissez un de vos appareils dans la liste
-  et il se signale (la lampe de démonstration « clignote » dans les logs).
+## La carte d'authentification
+
+À chaque connexion, la page de la centrale demande, en plus du code d'accès,
+le code d'**une case** de la **carte d'authentification** : « Code
+d'authentification B1 ». Cette carte est livrée avec la centrale (carte
+plastifiée ou papier, souvent rangée avec la notice ou dans le dossier de
+l'installateur) : une grille de **30 codes**, colonnes **A à F**, lignes
+**1 à 5**. La centrale change de case à chaque connexion : l'intégration a
+besoin de la carte entière.
+
+**Le plus simple : l'import depuis la centrale** (comme le fait l'intégration
+de référence). La centrale sait afficher sa carte une fois connecté :
+
+1. Dans la configuration, cliquez sur **Importer la carte** en laissant les
+   champs vides. La réponse indique la case demandée, par exemple « La
+   centrale demande la case B1 (colonne B, ligne 1) ».
+2. Lisez le code de cette case sur votre carte, saisissez-le dans **Code de la
+   case demandée** et cliquez de nouveau sur **Importer la carte** dans les
+   5 minutes (les lectures sont en pause pendant ce temps, pour que la
+   centrale garde la même case).
+3. L'intégration se connecte, lit les 30 codes sur la page de la carte, les
+   enregistre dans le champ **Carte d'authentification** et reprend les
+   lectures.
+
+Sur certaines **Protexiom**, la carte n'est visible que par le compte
+**administrateur** : la réponse du premier clic le précise, saisissez alors
+aussi le **code d'accès administrateur**. Il ne sert qu'à cet import et n'est
+pas enregistré.
+
+**Ou à la main** : saisissez les 30 codes dans **Carte d'authentification**,
+ligne par ligne, de gauche à droite : A1 B1 C1 D1 E1 F1, puis A2 … F2, jusqu'à
+F5, séparés par des espaces ou des retours à la ligne. La forme
+`A1=1234 B1=5678 …` (dans n'importe quel ordre) est acceptée aussi : c'est
+celle que l'import enregistre.
+
+La carte est un secret : Gladys la garde comme un mot de passe et ne la
+renvoie jamais au navigateur. Ne la publiez pas (captures d'écran, journaux).
+
+## Une seule session à la fois
+
+La centrale n'accepte **qu'une session à la fois**. Pour vous laisser la
+place, l'intégration ne garde pas de session ouverte : à chaque lecture elle
+se connecte, lit l'état, puis se déconnecte (quelques secondes). Si vous ouvrez
+la page web de la centrale au même moment, elle peut vous refuser (« session
+déjà ouverte ») : réessayez quelques secondes plus tard.
+
+Dans l'autre sens, si **vous** êtes connecté sur la page web (ou l'application
+Somfy), l'intégration le voit, n'insiste pas et réessaie à la lecture suivante
+(statut « Une autre session est ouverte »). Après **5 lectures de suite**
+refusées pour cette raison, elle valide le message d'erreur de la centrale et
+reprend la session, comme l'intégration de référence : pensez à vous
+déconnecter de la page web.
+
+## Armer et désarmer depuis Gladys
+
+- **Mode de l'alarme** : choisissez la combinaison de zones voulue. Les zones
+  manquantes sont armées une par une (ou les trois d'un coup pour « totale »).
+- **Zone A, B, C** : allumer arme la zone. Éteindre une zone **désarme les
+  trois** : la centrale n'a qu'un bouton « Arrêt A B C ».
+- **Armer** est permis par défaut ; vous pouvez l'interdire dans la
+  configuration.
+- **Désarmer est désactivé par défaut** (comme l'ouverture de porte des
+  intégrations DoorBird ou UniFi Access) : toute personne pouvant piloter les
+  appareils de Gladys (tableau de bord, scènes, application, assistant) pourrait
+  sinon couper l'alarme. Activez **Autoriser le désarmement depuis Gladys**
+  seulement si votre Gladys est bien protégé (comptes, accès distant). Passer
+  d'une combinaison à une autre qui retire une zone (par exemple de « totale »
+  à « zone A ») passe par un désarmement, puis réarme les zones demandées.
+- Une commande refusée par la configuration n'envoie rien à la centrale.
+- **Chaque armement et désarmement est écrit dans les journaux** de
+  l'intégration : ceux demandés par Gladys (« ARMING zone A from Gladys »,
+  « Disarm REFUSED ») comme ceux vus sur la centrale (« zone A ARMED (keypad,
+  remote or app) »).
+- La commande est vérifiée dans la même session : l'état lu juste après est
+  publié aussitôt.
+
+## Volets et lumières
+
+La centrale pilote un groupe de volets et un groupe de lumières (récepteurs
+radio associés à la centrale). **Volets Somfy** accepte ouvrir, fermer et
+arrêter ; **Lumières Somfy** allumer et éteindre. La centrale ne renvoie pas
+leur état : Gladys montre la dernière commande envoyée.
 
 ## Scènes
 
-L'intégration ajoute ses propres cartes à l'éditeur de scènes (Gladys 5.1
-ou plus récent), dans la catégorie **Intégrations** :
+Déclencheurs, dans la catégorie **Intégrations** de l'éditeur de scènes
+(Gladys 5.1 ou plus récent) :
 
-- **Mouvement détecté** (déclencheur) — lance la scène quand un détecteur
-  de démonstration voit bouger quelque chose. Choisissez éventuellement le
-  détecteur et ce qui a bougé (personne, animal) ; laissés vides, toute
-  détection correspond. Les actions suivantes peuvent lire ce qui a bougé
-  avec `{{triggerEvent.data.target}}`.
-- **Identifier un appareil** (action) — fait se signaler l'appareil choisi.
-  Elle indique si l'appareil a pu se signaler, pour que les actions
-  suivantes puissent en dépendre.
+| Déclencheur                       | Quand                                                                       | Variables                                        |
+| --------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------ |
+| Alarme Somfy déclenchée           | une intrusion apparaît pendant qu'une zone est armée                        | `zones` (zones armées, ex. `A B`)                |
+| Zone Somfy armée                  | une zone vient d'être armée (filtre possible sur la zone)                   | `zone`, `zones` (armées maintenant), `by_gladys` |
+| Zone Somfy désarmée               | une zone vient d'être désarmée (filtre possible sur la zone)                | `zone`, `zones` (encore armées), `by_gladys`     |
+| Intrusion ou autoprotection Somfy | un détecteur signale une intrusion (armée ou non), ou le boîtier est ouvert | `kind` (`intrusion` ou `tamper`), `armed`        |
+| Piles faibles Somfy               | un élément signale des piles faibles                                        | —                                                |
 
-## Tableau de bord
+- `by_gladys` vaut vrai quand le changement suit une commande de Gladys (moins
+  de 5 minutes avant) : de quoi ne pas notifier vos propres armements.
+- Les événements viennent des lectures : ils arrivent avec le délai de la
+  lecture suivante. Rien n'est déclenché à la première lecture après un
+  démarrage.
 
-Ajoutez le widget **État de la démo** à un tableau de bord : il affiche en
-direct la température de la station météo et la puissance de la prise du
-bureau, la connexion utilisée par la prise (en orange si dégradée) et la
-position observée. Son bouton **Identifier la lampe** fait se signaler la
-lampe de démonstration.
+Action de scène : **Effacer la mémoire des défauts Somfy** (alarmes, piles,
+liaisons radio, ou tous).
+
+## Fréquence de lecture et piles
+
+La centrale fonctionne **sur piles** (le secteur n'alimente que son module
+Ethernet) et chaque lecture la sollicite. Deux intervalles :
+
+- **quand une zone est armée** : 60 s par défaut (30 s à 1 h) ;
+- **quand rien n'est armé** : 5 minutes par défaut (30 s à 24 h). Un armement
+  par télécommande ou clavier apparaît dans Gladys à la lecture suivante.
+
+Le bouton **Lire la centrale maintenant** force une lecture. Après une commande
+envoyée par Gladys, l'état est relu aussitôt. En cas d'erreur, les essais
+s'espacent (1, 2, 5, 10 puis 15 minutes).
+
+## Protection contre le blocage de la centrale
+
+Trop de codes faux bloquent les connexions de la centrale (« Nombre d'essais
+maximum atteint »). L'intégration ne prend pas ce risque :
+
+- un **code d'accès** refusé arrête aussitôt les connexions ;
+- un **code de carte** refusé est signalé avec sa case (« la centrale a refusé
+  le code de la case C3 ») ; deux refus de suite arrêtent les connexions ;
+- une case absente de la carte est signalée sans tenter de connexion ;
+- si la centrale indique qu'elle bloque les connexions, tout s'arrête.
+
+Une fois arrêtée, l'intégration attend une modification de la configuration ou
+un clic sur **Tester la connexion** ; le statut de connexion dit pourquoi.
+
+## Options
+
+- **Modèle de centrale** : automatique par défaut.
+- **Autoriser l'armement / le désarmement depuis Gladys** : voir plus haut.
+- **Intervalles de lecture** : voir plus haut.
+- **Langue des noms des appareils** : français ou anglais, pour les appareils
+  ajoutés ensuite.
 
 ## Dépannage
 
-L'intégration journalise tout ce qu'elle fait : consultez les logs de
-l'intégration depuis l'interface Gladys (ou `docker logs` sur l'hôte) avec
-`LOG_LEVEL=debug` pour le détail complet.
+- **« Pas de page de connexion Somfy … à cette adresse »** : vérifiez
+  l'adresse (ouvrez-la dans un navigateur), le port, et que la centrale est
+  sous tension. Sinon, choisissez le modèle dans la configuration.
+- **« Centrale injoignable »** : la centrale ne répond pas (réseau, module
+  Ethernet, adresse changée).
+- **« Une autre session est ouverte »** : déconnectez-vous de la page web de la
+  centrale ou de l'application Somfy.
+- **« La centrale a refusé le code de la case … »** : corrigez ce code de la
+  carte (ou refaites l'import).
+- **Les états d'intrusion ou de piles restent à 1** : la centrale les
+  mémorise ; effacez la mémoire des défauts.
+- Les journaux de l'intégration (onglet **Journaux**, ou `docker logs`)
+  détaillent chaque lecture ; les codes n'y figurent jamais.
+
+## Confidentialité
+
+L'adresse, le code d'accès et la carte restent dans Gladys (le code et la
+carte comme secrets, jamais renvoyés au navigateur). L'intégration ne parle
+qu'à la centrale, sur votre réseau local, comme votre navigateur : la page web
+de ces centrales est en HTTP non chiffré, les codes y circulent donc en clair
+sur le réseau local, exactement comme lorsque vous vous connectez vous-même.
+Somfy, Protexial et Protexiom sont des marques de Somfy ; cette intégration est
+sans lien avec Somfy.

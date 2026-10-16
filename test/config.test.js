@@ -1,33 +1,77 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeConfig, DEFAULT_CONFIG } from '../src/config.js';
+import { DEFAULTS, normalizeConfig, normalizeUrl, sessionKey } from '../src/config.js';
+import { CARD_TYPED } from './fixtures/pages.js';
 
-test('normalizeConfig returns the defaults when called with no argument', () => {
-  assert.deepEqual(normalizeConfig(), DEFAULT_CONFIG);
+test('the panel address: scheme, host and port only', () => {
+  assert.equal(normalizeUrl('192.168.1.30'), 'http://192.168.1.30');
+  assert.equal(normalizeUrl(' http://192.168.1.30:9876/fr/login.htm '), 'http://192.168.1.30:9876');
+  assert.equal(normalizeUrl('https://alarme.lan/'), 'https://alarme.lan');
+  assert.equal(normalizeUrl('ftp://192.168.1.30'), '');
+  assert.equal(normalizeUrl('http://'), '');
+  assert.equal(normalizeUrl(''), '');
+  assert.equal(normalizeUrl(undefined), '');
 });
 
-test('normalizeConfig keeps user values over the defaults', () => {
-  const config = normalizeConfig({ latitude: 45.5, longitude: -73.6, unit: 'fahrenheit' });
-  assert.equal(config.latitude, 45.5);
-  assert.equal(config.longitude, -73.6);
-  assert.equal(config.unit, 'fahrenheit');
+test('defaults: arming allowed, disarming not, 60 s armed and 5 min disarmed', () => {
+  const config = normalizeConfig({});
+  assert.deepEqual(
+    {
+      model: config.model,
+      allowArm: config.allowArm,
+      allowDisarm: config.allowDisarm,
+      pollArmed: config.pollArmed,
+      pollDisarmed: config.pollDisarmed,
+      language: config.language,
+    },
+    {
+      model: DEFAULTS.model,
+      allowArm: true,
+      allowDisarm: false,
+      pollArmed: 60,
+      pollDisarmed: 300,
+      language: 'fr',
+    },
+  );
+  assert.equal(config.card.problem, 'empty');
 });
 
-test('normalizeConfig coerces numeric strings coming from a form', () => {
-  const config = normalizeConfig({ latitude: '48.8', longitude: '2.3', poll_frequency: '600' });
-  assert.equal(config.latitude, 48.8);
-  assert.equal(config.longitude, 2.3);
-  assert.equal(config.poll_frequency, 600);
-  assert.equal(typeof config.poll_frequency, 'number');
+test('values are bounded and checked', () => {
+  const config = normalizeConfig({
+    url: '10.0.0.2',
+    user_code: ' 1234 ',
+    auth_card: CARD_TYPED,
+    model: 'PROTEXIOM',
+    allow_arm: false,
+    allow_disarm: true,
+    poll_interval: 5,
+    poll_interval_disarmed: 999999,
+    language: 'EN',
+  });
+  assert.equal(config.userCode, '1234');
+  assert.equal(config.card.count, 30);
+  assert.equal(config.model, 'protexiom');
+  assert.equal(config.allowArm, false);
+  assert.equal(config.allowDisarm, true);
+  assert.equal(config.pollArmed, 30);
+  assert.equal(config.pollDisarmed, 86400);
+  assert.equal(config.language, 'en');
+  const odd = normalizeConfig({
+    model: 'nope',
+    allow_disarm: 'yes',
+    poll_interval: 'x',
+    language: 'de',
+  });
+  assert.equal(odd.model, 'auto');
+  assert.equal(odd.allowDisarm, false, 'only a real true allows disarming');
+  assert.equal(odd.pollArmed, 60);
+  assert.equal(odd.language, 'fr');
 });
 
-test('normalizeConfig falls back to the default for a missing numeric field', () => {
-  const config = normalizeConfig({ unit: 'celsius' });
-  assert.equal(config.poll_frequency, DEFAULT_CONFIG.poll_frequency);
-});
-
-test('GLADYS_PREFER_LOCAL defaults to true and only an explicit false disables it', () => {
-  assert.equal(normalizeConfig().GLADYS_PREFER_LOCAL, true);
-  assert.equal(normalizeConfig({ GLADYS_PREFER_LOCAL: true }).GLADYS_PREFER_LOCAL, true);
-  assert.equal(normalizeConfig({ GLADYS_PREFER_LOCAL: false }).GLADYS_PREFER_LOCAL, false);
+test('the session key changes with the address, code, card or model only', () => {
+  const base = { url: '10.0.0.2', user_code: '1', auth_card: CARD_TYPED };
+  const key = sessionKey(normalizeConfig(base));
+  assert.equal(sessionKey(normalizeConfig({ ...base, language: 'en', poll_interval: 90 })), key);
+  assert.notEqual(sessionKey(normalizeConfig({ ...base, user_code: '2' })), key);
+  assert.notEqual(sessionKey(normalizeConfig({ ...base, model: 'protexiom' })), key);
 });

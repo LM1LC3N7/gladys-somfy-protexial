@@ -12,44 +12,33 @@ the notes of the version's GitHub Release.
 
 ### Added
 
-- A working example of scene triggers, scene actions and dashboard widgets
-  (Gladys 5.1.0 or later).
-- `CHANGELOG.md`, rolled by the Release workflow.
-- A GitHub Release for every version, with its changelog section as notes: the
-  Gladys Supervision page links each version to the repository's releases.
-- CI runs the tests on Node 22 and 24, and builds the Docker image.
-- Dependabot keeps the npm dependencies and the GitHub Actions up to date.
-- `SECURITY.md` (how to report a vulnerability) and `CLAUDE.md` (project rules
-  for contributors and coding assistants).
-- Manifest tests: `version` matches `package.json`, `docker_image` is tagged
-  with it, descriptions hold 10 to 100 characters, placeholders are
-  multi-language objects.
-- The latitude and longitude fields show an example value as placeholder.
+- Somfy Protexial, Protexiom (incl. 5000 and 600) and Protexial IO alarm
+  panels through their local web page: the four known web interfaces and the
+  language of the interface (`/fr/`, `/de/`, `/gb/`…) detected by themselves,
+  or the model chosen by hand.
+- One login / read / logout session per read, none kept open: the Somfy web
+  page stays usable between two reads. Another session open is left alone
+  for five reads, then taken over.
+- The authentication card: imported from the panel in two clicks of
+  "Import the card" (the code of the cell asked, then the 30 codes read on
+  the card page), or typed by hand.
+- An alarm device: mode select (disarmed, one zone, two zones, total), one
+  switch per zone, alarm triggered, intrusion detected, doors and windows
+  closed, box tamper, low battery, radio link, and GSM link, signal and
+  operator and camera link when the panel reports them.
+- Arming from Gladys (allowed by default) and disarming (off by default, an
+  option of the configuration); every arm and disarm logged.
+- A shutters device (open, close, stop) and a lights device (on, off).
+- Scene triggers "Somfy alarm triggered", "Somfy zone armed", "Somfy zone
+  disarmed" (with a zone filter and whether Gladys asked for it), "Somfy
+  intrusion or tamper" and "Somfy low battery"; scene action and button
+  "Clear the fault memory".
+- Reads every 60 s while armed and every 5 minutes otherwise (the panel runs
+  on batteries), backoff after errors, "Read the panel now" and "Test the
+  connection" buttons.
+- Logins stop after a refused user code or two refused card codes in a row,
+  before the panel locks itself, until the configuration changes or the test
+  button is clicked.
+- Device, feature and mode names in French or English.
 
-### Changed
-
-- Node.js 22 or later is required (Node 20 is end-of-life).
-- Integration SDK 0.15.0. The tests now run against the fake Gladys of the
-  SDK, which refuses the payloads Gladys refuses.
-- The refresh interval is one minute minimum, the fastest Gladys polls a
-  device. The plug's power is only sent when it changes, and every 30
-  minutes otherwise.
-
-### Fixed
-
-- Gladys refused the devices of the Discovery tab: the weather station and
-  the plug declared their poll frequency in seconds instead of one of the
-  values Gladys accepts, and were never polled. They now poll every minute,
-  and the readings follow the refresh interval of the configuration.
-
-- The release commit no longer fails `npm run format:check`: the Release
-  workflow updates the manifest `version` and `docker_image` in place instead
-  of re-printing the whole file with `jq`.
-- The integration can write to `/data`: the image creates the directory owned
-  by the `node` user, a new Docker volume was owned by root.
-- A sub-container running the integration's own image follows it to the new
-  tag at each release, as well as in the manifest of the build summary: it kept
-  the previous tag, which may not exist on the registry. Sub-containers on a
-  third-party image (a broker, a database...) keep theirs.
-
-[Unreleased]: https://github.com/GladysAssistant/integration-template-js/commits/main
+[Unreleased]: https://github.com/LM1LC3N7/gladys-somfy-protexial/commits/main
